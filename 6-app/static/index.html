@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Operations Intelligence Assistant — NextEra Energy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+
+<header class="header">
+  <div class="brand">
+    <img src="/static/nextera_logo.png" alt="NextEra Energy" />
+    <div class="brand-divider"></div>
+    <div>
+      <div class="app-title">Operations Intelligence Assistant</div>
+      <div class="app-subtitle">Supervisor Agent · Structured + Document Reasoning</div>
+    </div>
+  </div>
+  <div class="header-actions">
+    <span class="status-chip" id="statusChip">
+      <span class="status-dot"></span>
+      3 Genie Spaces · 50 Documents Online
+    </span>
+    <div class="avatar" id="userAvatar">U</div>
+  </div>
+</header>
+
+<div class="layout">
+
+  <!-- ============ Left Sidebar ============ -->
+  <aside class="sidebar">
+    <button class="new-chat-btn" id="newChatBtn">
+      <span>＋</span> New Conversation
+    </button>
+
+    <h3>About This Assistant
+      <span class="h3-hint">Sources the supervisor can reason across</span>
+    </h3>
+
+    <div class="info-card">
+      <div class="info-card-head">
+        <div class="info-card-title">
+          <span class="info-card-icon genie">⚡</span>Grid Operations
+        </div>
+        <span class="info-card-type genie">Genie</span>
+      </div>
+      <div class="info-card-desc">Asset health, outages, telemetry trends, and reliability KPIs.</div>
+      <div class="info-card-meta">15 measures <span class="dot">·</span> 7 sources</div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-head">
+        <div class="info-card-title">
+          <span class="info-card-icon genie">💰</span>Financial Performance
+        </div>
+        <span class="info-card-type genie">Genie</span>
+      </div>
+      <div class="info-card-desc">Revenue, OpEx, profitability, market exposure, and outage cost impact.</div>
+      <div class="info-card-meta">9 measures <span class="dot">·</span> 8 sources</div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-head">
+        <div class="info-card-title">
+          <span class="info-card-icon genie">🔧</span>Maintenance &amp; Workforce
+        </div>
+        <span class="info-card-type genie">Genie</span>
+      </div>
+      <div class="info-card-desc">Work orders, technician utilization, preventive vs. reactive trends, safety.</div>
+      <div class="info-card-meta">15 measures <span class="dot">·</span> 9 sources</div>
+    </div>
+
+    <div class="info-card">
+      <div class="info-card-head">
+        <div class="info-card-title">
+          <span class="info-card-icon rag">📄</span>Utility Ops Knowledge
+        </div>
+        <span class="info-card-type rag">Docs</span>
+      </div>
+      <div class="info-card-desc">Outage investigations, corrective actions, vendor contracts, OEM manuals, RCAs, escalations.</div>
+      <div class="info-card-meta">50 PDFs <span class="dot">·</span> 9 doc types</div>
+    </div>
+
+    <h3 style="margin-top:24px;">Recent Conversations</h3>
+    <div class="recent-list" id="recentList">
+      <div class="recent-item empty">No conversations yet</div>
+    </div>
+  </aside>
+
+  <!-- ============ Main Conversation ============ -->
+  <main class="main">
+    <div class="conversation-header">
+      <div>
+        <div class="conversation-title" id="convoTitle">New conversation</div>
+        <div class="header-meta" id="convoMeta">Ask anything — the supervisor will route to the right source.</div>
+      </div>
+      <button class="icon-btn" title="More">⋮</button>
+    </div>
+
+    <div class="messages" id="messages">
+      <div class="empty-state">
+        <div class="empty-icon">💭</div>
+        <div class="empty-title">Ask about operations, finance, maintenance, or documents</div>
+        <div class="empty-sub">The supervisor agent will decide which Genie space or document source to use, and show you the trace.</div>
+        <div class="quick-prompts" style="margin-top:18px;padding:0;justify-content:center;">
+          <span class="quick-prompt">Why are emergency vendor costs rising in NW-PowerPool?</span>
+          <span class="quick-prompt">Top 5 outages by lost MWh this year</span>
+          <span class="quick-prompt">What does RCA-2025-003 say about WIN-10130?</span>
+          <span class="quick-prompt">Compare Apex vs CPS pricing</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Composer -->
+    <div class="composer">
+      <div class="composer-box">
+        <textarea class="composer-input" id="composerInput" placeholder="Ask anything about operations, finance, maintenance, or documents…" rows="1"></textarea>
+        <div class="composer-actions">
+          <button class="icon-btn" title="Attach file">📎</button>
+          <button class="send-btn" id="sendBtn">Ask <span>→</span></button>
+        </div>
+      </div>
+      <div class="composer-hint">Supervisor will route across Genie Spaces (structured) and document RAG (PDF corpus). Press <kbd>⏎</kbd> to send · <kbd>Shift+⏎</kbd> for newline.</div>
+    </div>
+  </main>
+
+  <!-- ============ Right Inspector Panel ============ -->
+  <aside class="inspector">
+    <div class="inspector-header">
+      <span style="color:var(--nx-blue);font-size:16px;">🔍</span>
+      <span class="inspector-title">Routing &amp; Sources</span>
+    </div>
+
+    <div class="inspector-section" id="traceSection">
+      <h4>Supervisor Trace</h4>
+      <div class="inspector-empty">No trace yet — ask a question to see how the supervisor routes.</div>
+    </div>
+
+    <div class="inspector-section" id="sourcesSection" style="display:none;">
+      <h4>Sources Used</h4>
+      <div id="sourceList"></div>
+    </div>
+  </aside>
+
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

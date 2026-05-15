@@ -1,0 +1,5 @@
+wireframe.html
+wireframe_*.png
+__pycache__/
+*.pyc
+.DS_Store

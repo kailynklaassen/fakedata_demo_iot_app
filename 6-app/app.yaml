@@ -1,0 +1,11 @@
+command:
+  - "uvicorn"
+  - "app:app"
+  - "--host"
+  - "0.0.0.0"
+  - "--port"
+  - "8000"
+
+env:
+  - name: "SUPERVISOR_ENDPOINT"
+    value: "mas-cf2369f5-endpoint"

@@ -1,0 +1,40 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+.python-version
+
+# Notebook checkpoints
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# uv / pip
+.uv/
+uv.lock
+
+# Local generated artifacts that should not be committed
+/tmp/
+*.log
+generation.log
+build_mv.log
+test_mv.log
+
+# Local-only narrative anchors (regenerable)
+narrative_bible.json
+
+# Wireframe artifacts (not part of the deployable app)
+wireframe.html
+wireframe_*.png
+wireframe_preview*.png
+
+# Databricks CLI state
+.databricks/
