@@ -16,9 +16,9 @@ from mimesis import Generic
 from mimesis.locales import Locale
 from databricks.connect import DatabricksSession
 
-CATALOG = "serverless_stable_cgxfyd_catalog"
-SCHEMA = "kailyn_klaassen"
-PROFILE = "fe-vm-serverless-stable-cgxfyd"
+CATALOG = globals().get("CATALOG", "serverless_stable_cgxfyd_catalog")
+SCHEMA = globals().get("SCHEMA", "kailyn_klaassen")
+PROFILE = globals().get("PROFILE", "fe-vm-serverless-stable-cgxfyd")
 SEED = 42
 
 os.environ["DATABRICKS_CONFIG_PROFILE"] = PROFILE

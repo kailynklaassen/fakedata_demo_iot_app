@@ -16,15 +16,15 @@ import sys
 sys.path.insert(0, "/Users/kailyn.klaassen/.vibe/marketplace/plugins/fe-internal-tools/skills/genie-rooms/resources")
 from genie_space_builder import GenieSpaceBuilder
 
-CAT = "serverless_stable_cgxfyd_catalog"
-SCH = "kailyn_klaassen"
-WAREHOUSE_ID = "7e4da1bdd34b875f"
-USER_EMAIL = "kailyn.klaassen@databricks.com"
+CATALOG = globals().get("CATALOG", "serverless_stable_cgxfyd_catalog")
+SCHEMA = globals().get("SCHEMA", "kailyn_klaassen")
+WAREHOUSE_ID = globals().get("WAREHOUSE_ID", "7e4da1bdd34b875f")
+USER_EMAIL = globals().get("USER_EMAIL", "kailyn.klaassen@databricks.com")
 PARENT_PATH = f"/Workspace/Users/{USER_EMAIL}"
 
 
 def q(t):  # qualify
-    return f"{CAT}.{SCH}.{t}"
+    return f"{CATALOG}.{SCHEMA}.{t}"
 
 
 def sort_by_id_and_dump(builder: GenieSpaceBuilder, path: str) -> None:

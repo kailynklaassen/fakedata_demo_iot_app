@@ -5,13 +5,13 @@ For each view: hit every measure, with at least one meaningful grouping dimensio
 import os
 from databricks.connect import DatabricksSession
 
-CAT = "serverless_stable_cgxfyd_catalog"
-SCH = "kailyn_klaassen"
-PROFILE = "fe-vm-serverless-stable-cgxfyd"
+CATALOG = globals().get("CATALOG", "serverless_stable_cgxfyd_catalog")
+SCHEMA = globals().get("SCHEMA", "kailyn_klaassen")
+PROFILE = globals().get("PROFILE", "fe-vm-serverless-stable-cgxfyd")
 os.environ["DATABRICKS_CONFIG_PROFILE"] = PROFILE
 
 spark = DatabricksSession.builder.profile(PROFILE).serverless().getOrCreate()
-spark.sql(f"USE {CAT}.{SCH}")
+spark.sql(f"USE {CATALOG}.{SCHEMA}")
 
 GREEN = "\033[92m"
 RED = "\033[91m"
@@ -29,7 +29,7 @@ def query(view, dim_sql, measures, group_by="GROUP BY ALL", limit=5, order_by=No
     sql = f"""
 SELECT
   {select_clause}
-FROM {CAT}.{SCH}.{view}
+FROM {CATALOG}.{SCHEMA}.{view}
 {group_by}
 {order}
 LIMIT {limit}

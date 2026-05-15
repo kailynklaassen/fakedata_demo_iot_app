@@ -39,6 +39,12 @@ Every step that has a `.py` script also has an equivalent `.ipynb` notebook — 
 - **Notebook (.ipynb)** — open and run in a Databricks workspace or local Jupyter
 - **Script (.py)** — run locally with `uv run --python 3.12 --with <deps> script.py`
 
+## Fastest path — one-shot setup
+
+Open **`setup_all.ipynb`** at the repo root in a Databricks workspace. Fill in the widgets at the top (catalog, schema, volume, warehouse ID, your email), then **Run All**. It runs every automatable step (1, 1b, 2, 2b, 3, 4) in order using `%run` against the child notebooks, so all of them share your widget values. Total runtime: ~25-35 minutes (dominated by the 10M-row telemetry generation).
+
+Steps **5 (build the supervisor in Agent Bricks)** and **6 (deploy the Databricks App)** remain manual — they involve UI work or shell commands that don't make sense from inside a notebook. The README files in those folders walk you through them.
+
 ## Architecture
 
 ```
@@ -85,9 +91,9 @@ Every step that has a `.py` script also has an equivalent `.ipynb` notebook — 
    brew install cairo pango gdk-pixbuf libffi glib
    ```
 
-## End-to-end deployment
+## End-to-end deployment (manual / per-step)
 
-Run each numbered folder in order. Each has its own `README.md` with detailed steps.
+If you prefer to run each step individually (or you're running outside of Databricks):
 
 ```bash
 # 1. Generate structured operational data

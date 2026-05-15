@@ -4,13 +4,13 @@ Sanity SQL — validates causal chains and signal patterns in the generated data
 import os
 from databricks.connect import DatabricksSession
 
-PROFILE = "fe-vm-serverless-stable-cgxfyd"
-CAT = "serverless_stable_cgxfyd_catalog"
-SCH = "kailyn_klaassen"
+PROFILE = globals().get("PROFILE", "fe-vm-serverless-stable-cgxfyd")
+CATALOG = globals().get("CATALOG", "serverless_stable_cgxfyd_catalog")
+SCHEMA = globals().get("SCHEMA", "kailyn_klaassen")
 os.environ["DATABRICKS_CONFIG_PROFILE"] = PROFILE
 
 spark = DatabricksSession.builder.profile(PROFILE).serverless().getOrCreate()
-spark.sql(f"USE {CAT}.{SCH}")
+spark.sql(f"USE {CATALOG}.{SCHEMA}")
 
 
 def run(title, sql):

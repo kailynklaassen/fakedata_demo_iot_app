@@ -11,14 +11,14 @@ Layer architecture:
 import os
 from databricks.connect import DatabricksSession
 
-CAT = "serverless_stable_cgxfyd_catalog"
-SCH = "kailyn_klaassen"
-PROFILE = "fe-vm-serverless-stable-cgxfyd"
+CATALOG = globals().get("CATALOG", "serverless_stable_cgxfyd_catalog")
+SCHEMA = globals().get("SCHEMA", "kailyn_klaassen")
+PROFILE = globals().get("PROFILE", "fe-vm-serverless-stable-cgxfyd")
 os.environ["DATABRICKS_CONFIG_PROFILE"] = PROFILE
 
 spark = DatabricksSession.builder.profile(PROFILE).serverless().getOrCreate()
-spark.sql(f"USE {CAT}.{SCH}")
-print(f"Connected to {CAT}.{SCH}\n")
+spark.sql(f"USE {CATALOG}.{SCHEMA}")
+print(f"Connected to {CATALOG}.{SCHEMA}\n")
 
 
 def step(label):
@@ -43,8 +43,8 @@ SELECT a.asset_id,
        a.site_id,
        s.capacity_mw / NULLIF(COUNT(*) OVER (PARTITION BY a.site_id), 0) AS asset_capacity_mw,
        a.asset_type IN ('wind_turbine','inverter','battery_unit') AS is_generation_asset
-FROM {CAT}.{SCH}.assets a
-JOIN {CAT}.{SCH}.sites s ON a.site_id = s.site_id
+FROM {CATALOG}.{SCHEMA}.assets a
+JOIN {CATALOG}.{SCHEMA}.sites s ON a.site_id = s.site_id
 """, "asset capacity slice")
 
 run_sql(f"""
@@ -61,7 +61,7 @@ SELECT
   SUM(CASE WHEN alarm_flag THEN 1 ELSE 0 END) AS alarm_count,
   STDDEV(voltage) AS voltage_stddev,
   TRUE AS has_telemetry
-FROM {CAT}.{SCH}.telemetry
+FROM {CATALOG}.{SCHEMA}.telemetry
 GROUP BY asset_id, DATE(timestamp)
 """, "telemetry daily aggregates")
 
@@ -70,7 +70,7 @@ CREATE OR REPLACE TEMPORARY VIEW _anomalies_daily AS
 SELECT asset_id, DATE(timestamp) AS date,
        COUNT(*) AS anomaly_count,
        MAX(severity_score) AS max_severity_score
-FROM {CAT}.{SCH}.sensor_anomalies
+FROM {CATALOG}.{SCHEMA}.sensor_anomalies
 GROUP BY asset_id, DATE(timestamp)
 """, "anomaly daily counts")
 
@@ -82,7 +82,7 @@ SELECT
   COUNT(DISTINCT CASE WHEN forced_outage_flag THEN outage_id END) AS forced_outage_count,
   SUM((UNIX_TIMESTAMP(outage_end_ts) - UNIX_TIMESTAMP(outage_start_ts))/3600.0) AS total_downtime_hours,
   SUM(lost_generation_mwh) AS total_lost_mwh
-FROM {CAT}.{SCH}.outages
+FROM {CATALOG}.{SCHEMA}.outages
 GROUP BY asset_id, DATE(outage_start_ts)
 """, "outage daily aggregates (attributed to start date)")
 
@@ -97,7 +97,7 @@ SELECT
   SUM(CASE WHEN work_order_type='inspection' THEN 1 ELSE 0 END) AS inspection_wo_count,
   SUM(labor_hours) AS total_labor_hours,
   SUM(parts_cost_usd) AS total_parts_cost
-FROM {CAT}.{SCH}.work_orders
+FROM {CATALOG}.{SCHEMA}.work_orders
 GROUP BY asset_id, DATE(created_ts)
 """, "work order daily aggregates")
 
@@ -106,12 +106,12 @@ CREATE OR REPLACE TEMPORARY VIEW _maintenance_daily AS
 SELECT asset_id, planned_date AS date,
        COUNT(CASE WHEN overdue_flag THEN 1 END) AS overdue_maintenance_count,
        COUNT(*) AS scheduled_count
-FROM {CAT}.{SCH}.maintenance_schedule
+FROM {CATALOG}.{SCHEMA}.maintenance_schedule
 GROUP BY asset_id, planned_date
 """, "maintenance schedule daily counts")
 
 run_sql(f"""
-CREATE OR REPLACE TABLE {CAT}.{SCH}.asset_daily_summary AS
+CREATE OR REPLACE TABLE {CATALOG}.{SCHEMA}.asset_daily_summary AS
 SELECT
   af.asset_id,
   af.date,
@@ -159,7 +159,7 @@ SELECT
   -- Maintenance schedule
   COALESCE(md.overdue_maintenance_count, 0) AS overdue_maintenance_count,
   COALESCE(md.scheduled_count, 0) AS scheduled_count
-FROM {CAT}.{SCH}.asset_financials af
+FROM {CATALOG}.{SCHEMA}.asset_financials af
 JOIN _asset_cap ac ON af.asset_id = ac.asset_id
 LEFT JOIN _telemetry_daily td ON af.asset_id = td.asset_id AND af.date = td.date
 LEFT JOIN _anomalies_daily ad ON af.asset_id = ad.asset_id AND af.date = ad.date
@@ -168,7 +168,7 @@ LEFT JOIN _work_orders_daily wd ON af.asset_id = wd.asset_id AND af.date = wd.da
 LEFT JOIN _maintenance_daily md ON af.asset_id = md.asset_id AND af.date = md.date
 """, "writing asset_daily_summary")
 
-n = spark.table(f"{CAT}.{SCH}.asset_daily_summary").count()
+n = spark.table(f"{CATALOG}.{SCHEMA}.asset_daily_summary").count()
 print(f"  asset_daily_summary: {n:,} rows")
 
 
@@ -182,13 +182,13 @@ CREATE OR REPLACE TEMPORARY VIEW _safety_daily_region AS
 SELECT s.region_id, DATE(si.incident_ts) AS date,
        COUNT(*) AS safety_incident_count,
        SUM(CASE WHEN si.lost_time_flag THEN 1 ELSE 0 END) AS lost_time_incident_count
-FROM {CAT}.{SCH}.safety_incidents si
-JOIN {CAT}.{SCH}.sites s ON si.site_id = s.site_id
+FROM {CATALOG}.{SCHEMA}.safety_incidents si
+JOIN {CATALOG}.{SCHEMA}.sites s ON si.site_id = s.site_id
 GROUP BY s.region_id, DATE(si.incident_ts)
 """, "safety incidents daily by region")
 
 run_sql(f"""
-CREATE OR REPLACE TABLE {CAT}.{SCH}.region_daily_summary AS
+CREATE OR REPLACE TABLE {CATALOG}.{SCHEMA}.region_daily_summary AS
 WITH base AS (
   SELECT
     s.region_id, r.region_name, s.generation_type, ads.date,
@@ -203,10 +203,10 @@ WITH base AS (
     ads.total_labor_hours, ads.wo_total_parts_cost,
     ads.overdue_maintenance_count,
     ads.alarm_count
-  FROM {CAT}.{SCH}.asset_daily_summary ads
-  JOIN {CAT}.{SCH}.assets a ON ads.asset_id = a.asset_id
-  JOIN {CAT}.{SCH}.sites s ON a.site_id = s.site_id
-  JOIN {CAT}.{SCH}.regions r ON s.region_id = r.region_id
+  FROM {CATALOG}.{SCHEMA}.asset_daily_summary ads
+  JOIN {CATALOG}.{SCHEMA}.assets a ON ads.asset_id = a.asset_id
+  JOIN {CATALOG}.{SCHEMA}.sites s ON a.site_id = s.site_id
+  JOIN {CATALOG}.{SCHEMA}.regions r ON s.region_id = r.region_id
 )
 SELECT
   b.region_id, b.region_name, b.generation_type, b.date,
@@ -241,7 +241,7 @@ GROUP BY b.region_id, b.region_name, b.generation_type, b.date,
          sd.safety_incident_count, sd.lost_time_incident_count
 """, "writing region_daily_summary")
 
-n = spark.table(f"{CAT}.{SCH}.region_daily_summary").count()
+n = spark.table(f"{CATALOG}.{SCHEMA}.region_daily_summary").count()
 print(f"  region_daily_summary: {n:,} rows")
 
 
@@ -253,19 +253,19 @@ step("Create grid_operations_metrics")
 GRID_OPS_YAML = f"""
 version: 1.1
 comment: "Grid operations and reliability KPIs at asset-day grain. Joins to assets/sites/regions."
-source: {CAT}.{SCH}.asset_daily_summary
+source: {CATALOG}.{SCHEMA}.asset_daily_summary
 
 joins:
   - name: asset
-    source: {CAT}.{SCH}.assets
+    source: {CATALOG}.{SCHEMA}.assets
     on: source.asset_id = asset.asset_id
     joins:
       - name: site
-        source: {CAT}.{SCH}.sites
+        source: {CATALOG}.{SCHEMA}.sites
         on: asset.site_id = site.site_id
         joins:
           - name: region
-            source: {CAT}.{SCH}.regions
+            source: {CATALOG}.{SCHEMA}.regions
             on: site.region_id = region.region_id
 
 dimensions:
@@ -376,7 +376,7 @@ measures:
 """
 
 spark.sql(f"""
-CREATE OR REPLACE VIEW {CAT}.{SCH}.grid_operations_metrics
+CREATE OR REPLACE VIEW {CATALOG}.{SCHEMA}.grid_operations_metrics
 WITH METRICS LANGUAGE YAML AS $${GRID_OPS_YAML}$$
 """)
 print("  grid_operations_metrics created")
@@ -390,19 +390,19 @@ step("Create financial_performance_metrics")
 FIN_YAML = f"""
 version: 1.1
 comment: "Financial performance and market-exposure KPIs at asset-day grain."
-source: {CAT}.{SCH}.asset_daily_summary
+source: {CATALOG}.{SCHEMA}.asset_daily_summary
 
 joins:
   - name: asset
-    source: {CAT}.{SCH}.assets
+    source: {CATALOG}.{SCHEMA}.assets
     on: source.asset_id = asset.asset_id
     joins:
       - name: site
-        source: {CAT}.{SCH}.sites
+        source: {CATALOG}.{SCHEMA}.sites
         on: asset.site_id = site.site_id
         joins:
           - name: region
-            source: {CAT}.{SCH}.regions
+            source: {CATALOG}.{SCHEMA}.regions
             on: site.region_id = region.region_id
 
 dimensions:
@@ -490,7 +490,7 @@ measures:
 """
 
 spark.sql(f"""
-CREATE OR REPLACE VIEW {CAT}.{SCH}.financial_performance_metrics
+CREATE OR REPLACE VIEW {CATALOG}.{SCHEMA}.financial_performance_metrics
 WITH METRICS LANGUAGE YAML AS $${FIN_YAML}$$
 """)
 print("  financial_performance_metrics created")
@@ -504,25 +504,25 @@ step("Create maintenance_workforce_metrics")
 MAINT_YAML = f"""
 version: 1.1
 comment: "Maintenance execution and workforce KPIs at work-order grain."
-source: {CAT}.{SCH}.work_orders
+source: {CATALOG}.{SCHEMA}.work_orders
 
 joins:
   - name: asset
-    source: {CAT}.{SCH}.assets
+    source: {CATALOG}.{SCHEMA}.assets
     on: source.asset_id = asset.asset_id
     joins:
       - name: site
-        source: {CAT}.{SCH}.sites
+        source: {CATALOG}.{SCHEMA}.sites
         on: asset.site_id = site.site_id
         joins:
           - name: region
-            source: {CAT}.{SCH}.regions
+            source: {CATALOG}.{SCHEMA}.regions
             on: site.region_id = region.region_id
   - name: technician
-    source: {CAT}.{SCH}.technicians
+    source: {CATALOG}.{SCHEMA}.technicians
     on: source.technician_id = technician.technician_id
   - name: outage_ref
-    source: {CAT}.{SCH}.outages
+    source: {CATALOG}.{SCHEMA}.outages
     on: source.outage_id = outage_ref.outage_id
 
 dimensions:
@@ -620,7 +620,7 @@ measures:
 """
 
 spark.sql(f"""
-CREATE OR REPLACE VIEW {CAT}.{SCH}.maintenance_workforce_metrics
+CREATE OR REPLACE VIEW {CATALOG}.{SCHEMA}.maintenance_workforce_metrics
 WITH METRICS LANGUAGE YAML AS $${MAINT_YAML}$$
 """)
 print("  maintenance_workforce_metrics created")
@@ -634,7 +634,7 @@ step("Create executive_summary_metrics")
 EXEC_YAML = f"""
 version: 1.1
 comment: "Executive rollup at region × generation_type × date grain. Single semantic layer for leadership Q&A."
-source: {CAT}.{SCH}.region_daily_summary
+source: {CATALOG}.{SCHEMA}.region_daily_summary
 
 dimensions:
   - name: region_name
@@ -742,7 +742,7 @@ measures:
 """
 
 spark.sql(f"""
-CREATE OR REPLACE VIEW {CAT}.{SCH}.executive_summary_metrics
+CREATE OR REPLACE VIEW {CATALOG}.{SCHEMA}.executive_summary_metrics
 WITH METRICS LANGUAGE YAML AS $${EXEC_YAML}$$
 """)
 print("  executive_summary_metrics created")
