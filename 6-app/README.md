@@ -1,6 +1,6 @@
-# 6 — Databricks App (NextEra-branded UI)
+# 6 — Databricks App (branded UI)
 
-A FastAPI + static-HTML Databricks App that talks to the supervisor multi-agent system from step 5. NextEra Energy brand palette, live response streaming, in-app Q&A cache, and a live "Routing & Sources" inspector panel showing exactly which tools the supervisor called.
+A FastAPI + static-HTML Databricks App that talks to the supervisor multi-agent system from step 5. Includes a neutral blue/green color palette, a placeholder logo, live response streaming, in-app Q&A cache, and a live "Routing & Sources" inspector panel showing exactly which tools the supervisor called. Swap the logo and CSS variables to brand it for any customer.
 
 ## Files
 
@@ -14,9 +14,9 @@ A FastAPI + static-HTML Databricks App that talks to the supervisor multi-agent 
 ├── .gitignore         excludes wireframe artifacts and pycache
 └── static/
     ├── index.html     UI layout
-    ├── style.css      NextEra-themed styles
+    ├── style.css      themable styles (blue/green palette via CSS variables)
     ├── app.js         Frontend — live streaming render, polling, cache rendering
-    └── nextera_logo.png
+    └── logo.png       placeholder logo — replace with your branding
 ```
 
 ## What the app does
@@ -172,7 +172,7 @@ Open http://localhost:8000. The Databricks SDK will pick up your local CLI auth.
 
 ## Rebranding for a different customer
 
-1. Replace `static/nextera_logo.png` with the new logo.
+1. Replace `static/logo.png` (the "Add Logo Here" placeholder) with the customer's logo. Recommended dimensions ~640 × 283 px with a transparent background; the header CSS auto-scales height to 44 px.
 2. Edit the CSS variables at the top of `static/style.css`:
 
    ```css

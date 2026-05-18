@@ -25,12 +25,12 @@ The demo tells a coherent story — *"emergency vendor costs are escalating in N
 │   └── pdfs/               # 50 generated PDFs (ready to upload)
 ├── 5-supervisor-model/     # UI walkthrough for building the supervisor agent
 │   └── README.md
-└── 6-app/                  # FastAPI / static UI Databricks App (NextEra-themed)
+└── 6-app/                  # FastAPI / static UI Databricks App
     ├── app.py              # backend: SSE streaming + in-app Q&A cache
     ├── app.yaml
     ├── deploy.sh           # one-command deploy
     ├── requirements.txt
-    └── static/             # index.html, style.css, app.js, nextera_logo.png
+    └── static/             # index.html, style.css, app.js, logo.png (placeholder — replace with your branding)
 ```
 
 Numbered prefixes are the **deployment order**.
@@ -152,4 +152,4 @@ The Databricks App you deploy in step 6 includes:
 
 - The narrative bible (`4-documents/NARRATIVE_BIBLE.md`) is the single source of truth for entity names, dates, and dollar values across all documents. Minor inter-document numeric drift exists on the Siemens Gamesa vibration threshold (3.5 vs 4.5 vs 6.0 mm/s across document groups) — direction of the narrative is consistent.
 - All structured data is for calendar year 2025. If you need a different year, change `YEAR_START` / `YEAR_END` in `1-data/generate.py`.
-- App uses the NextEra Energy color palette and logo. Replace `6-app/static/nextera_logo.png` and the CSS variables in `6-app/static/style.css` to rebrand.
+- App ships with a placeholder logo (`6-app/static/logo.png` — says "Add Logo Here") and a neutral blue/green palette. Replace the PNG with your branding and edit the CSS variables in `6-app/static/style.css` to rebrand for a specific customer.
