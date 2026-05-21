@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Operations Intelligence Assistant — Databricks Demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    /* Databricks palette */
+    --db-navy:       #1B3139;
+    --db-deep-teal:  #143D4A;
+    --db-teal:       #1B5162;
+    --db-gray-blue:  #618794;
+    --db-orange:     #FF3621;
+    --db-orange-2:   #FF5F46;
+    --db-amber:      #FFAB00;
+    --db-amber-2:    #FCBA33;
+    --db-green:      #00A972;
+    --db-green-2:    #00875C;
+    --db-mint:       #42BA91;
+    --db-mint-2:     #70C4AB;
+    --db-red:        #BD2B26;
+    --db-burgundy:   #98102A;
+    --db-rose:       #AB4057;
+    --db-light-gray: #C4CCD6;
+    --db-fog:        #A0ACBE;
+    --db-cream:      #FFDB96;
+    --db-blush:      #FABFBA;
+    --db-peach:      #FF9E94;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; overflow: hidden; font-family: 'DM Sans', system-ui, sans-serif; background: #000; color: var(--db-navy); }
+
+  /* ===== Stage & slides ===== */
+  .stage {
+    position: fixed; inset: 0;
+    perspective: 1500px;
+  }
+  .slide {
+    position: absolute; inset: 0;
+    padding: 70px 90px 90px;
+    display: flex; flex-direction: column;
+    justify-content: center;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.55s ease, transform 0.55s ease;
+    transform: scale(0.98);
+    background: #FFFFFF;
+    overflow: hidden;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; transform: scale(1); z-index: 10; }
+  .slide.prev { transform: scale(1.02); opacity: 0; }
+
+  /* ===== Top progress + side dots ===== */
+  .progress {
+    position: fixed; top: 0; left: 0; height: 3px;
+    background: linear-gradient(to right, var(--db-orange), var(--db-amber));
+    z-index: 100;
+    transition: width 0.4s ease;
+  }
+  .nav-dots {
+    position: fixed; right: 20px; top: 50%;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 8px;
+    z-index: 100;
+  }
+  .nav-dots .dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: rgba(0,0,0,0.15);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .nav-dots .dot.active { background: var(--db-orange); transform: scale(1.6); }
+  .nav-dots .dot:hover { background: var(--db-orange-2); }
+
+  .footer-bar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    height: 36px;
+    background: rgba(27,49,57,0.92); color: rgba(255,255,255,0.7);
+    font-size: 12px; font-family: 'DM Mono', monospace;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 24px; z-index: 90;
+    backdrop-filter: blur(6px);
+  }
+  .footer-bar .kbd {
+    background: rgba(255,255,255,0.08); padding: 2px 6px; border-radius: 4px;
+    margin: 0 3px; color: rgba(255,255,255,0.85);
+    border: 1px solid rgba(255,255,255,0.15);
+  }
+
+  /* ===== Common slide elements ===== */
+  .section-tag {
+    display: inline-block;
+    font-family: 'DM Mono', monospace; font-size: 11px;
+    text-transform: uppercase; letter-spacing: 0.16em;
+    padding: 4px 12px; border-radius: 999px;
+    margin-bottom: 24px;
+    background: var(--db-light-gray); color: var(--db-navy);
+  }
+  h1 { font-size: 84px; line-height: 1.02; font-weight: 800; letter-spacing: -0.025em; color: var(--db-navy); margin-bottom: 24px; }
+  h2 { font-size: 56px; line-height: 1.05; font-weight: 800; letter-spacing: -0.02em; color: var(--db-navy); margin-bottom: 24px; }
+  h3 { font-size: 36px; line-height: 1.15; font-weight: 700; letter-spacing: -0.01em; color: var(--db-navy); margin-bottom: 16px; }
+  h4 { font-size: 20px; font-weight: 700; color: var(--db-navy); margin-bottom: 6px; }
+  p, li { font-size: 22px; line-height: 1.5; color: #2A3942; }
+  .lead { font-size: 28px; line-height: 1.45; color: #354956; }
+  .small { font-size: 16px; color: #5B6B78; }
+  .mono { font-family: 'DM Mono', monospace; }
+
+  /* ===== Card grid ===== */
+  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; }
+  .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; }
+  .card {
+    background: #fff; border-radius: 14px;
+    padding: 22px;
+    border: 1px solid rgba(27,49,57,0.10);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    transition: transform 0.2s ease;
+  }
+  .card.accent-orange { border-top: 4px solid var(--db-orange); }
+  .card.accent-green { border-top: 4px solid var(--db-green); }
+  .card.accent-amber { border-top: 4px solid var(--db-amber); }
+  .card.accent-teal { border-top: 4px solid var(--db-gray-blue); }
+  .card.accent-rose { border-top: 4px solid var(--db-rose); }
+  .card.accent-mint { border-top: 4px solid var(--db-mint); }
+
+  /* ===== Stat block ===== */
+  .stat { text-align: left; }
+  .stat .num { font-size: 80px; font-weight: 800; line-height: 1; letter-spacing: -0.03em; }
+  .stat .label { font-size: 16px; color: #5B6B78; margin-top: 8px; }
+  .stat.orange .num { color: var(--db-orange); }
+  .stat.green .num { color: var(--db-green); }
+  .stat.amber .num { color: var(--db-amber); }
+  .stat.teal .num { color: var(--db-gray-blue); }
+  .stat.rose .num { color: var(--db-rose); }
+
+  /* ===== Dark slide variants ===== */
+  .slide.dark { background: var(--db-navy); color: #fff; }
+  .slide.dark h1, .slide.dark h2, .slide.dark h3, .slide.dark h4 { color: #fff; }
+  .slide.dark p, .slide.dark li, .slide.dark .lead { color: rgba(255,255,255,0.85); }
+  .slide.dark .small { color: rgba(255,255,255,0.55); }
+  .slide.dark .section-tag { background: rgba(255,255,255,0.1); color: #fff; }
+  .slide.dark .card { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.12); }
+
+  .slide.demo-pivot {
+    background: linear-gradient(135deg, var(--db-orange) 0%, var(--db-orange-2) 60%, var(--db-amber) 100%);
+    color: #fff; align-items: center; text-align: center;
+  }
+  .slide.demo-pivot h1 { color: #fff; font-size: 140px; letter-spacing: -0.04em; }
+  .slide.demo-pivot p { color: rgba(255,255,255,0.95); font-size: 28px; }
+
+  /* ===== Architecture diagram ===== */
+  .arch {
+    display: grid; grid-template-rows: auto auto auto; gap: 16px;
+    margin-top: 12px;
+  }
+  .arch .row { display: flex; justify-content: center; gap: 12px; }
+  .arch .box {
+    background: #fff; border: 2px solid var(--db-navy);
+    border-radius: 10px; padding: 14px 18px;
+    text-align: center; min-width: 140px;
+    font-size: 14px; font-weight: 600;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  }
+  .arch .box.app { background: var(--db-orange); color: #fff; border-color: var(--db-orange); }
+  .arch .box.sup { background: var(--db-navy); color: #fff; border-color: var(--db-navy); }
+  .arch .box.genie { background: var(--db-amber-2); border-color: var(--db-amber); color: var(--db-navy); }
+  .arch .box.rag { background: var(--db-mint); border-color: var(--db-green); color: #fff; }
+  .arch .box.data { background: var(--db-light-gray); border-color: var(--db-gray-blue); color: var(--db-navy); }
+  .arch .arrow {
+    align-self: center; font-size: 18px; color: var(--db-gray-blue);
+  }
+
+  /* Best practice numbered cards */
+  .bp { padding-left: 56px; position: relative; padding-bottom: 14px; padding-top: 4px; }
+  .bp .n {
+    position: absolute; left: 0; top: 0;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--db-amber); color: var(--db-navy);
+    font-weight: 700; font-size: 17px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .bp.green .n { background: var(--db-green); color: #fff; }
+  .bp.orange .n { background: var(--db-orange); color: #fff; }
+  .bp.rose .n { background: var(--db-rose); color: #fff; }
+  .bp.teal .n { background: var(--db-gray-blue); color: #fff; }
+  .bp h4 { margin-bottom: 2px; font-size: 18px; }
+  .bp p { font-size: 14px; color: #5B6B78; line-height: 1.4; }
+
+  /* Pill / chip */
+  .chip {
+    display: inline-block; padding: 4px 11px; border-radius: 999px;
+    font-size: 13px; font-weight: 600;
+    background: var(--db-light-gray); color: var(--db-navy);
+    margin: 0 4px 4px 0;
+  }
+  .chip.orange { background: var(--db-orange); color: #fff; }
+  .chip.green { background: var(--db-green); color: #fff; }
+  .chip.amber { background: var(--db-amber); color: var(--db-navy); }
+  .chip.teal { background: var(--db-gray-blue); color: #fff; }
+
+  /* Code style */
+  pre, code {
+    font-family: 'DM Mono', monospace; font-size: 15px;
+    background: rgba(27,49,57,0.05);
+    padding: 14px 16px; border-radius: 8px;
+    border-left: 3px solid var(--db-orange);
+    overflow-x: auto;
+    color: var(--db-navy);
+  }
+
+  .slide-title-row {
+    display: flex; align-items: baseline; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .slide-title-row .num-of {
+    font-family: 'DM Mono', monospace; font-size: 13px; color: var(--db-gray-blue);
+  }
+
+  /* Hero deco */
+  .hero-deco {
+    position: absolute; right: -120px; bottom: -120px; width: 600px; height: 600px;
+    background: radial-gradient(circle at 30% 30%, var(--db-orange) 0%, var(--db-amber) 40%, transparent 70%);
+    opacity: 0.15; pointer-events: none;
+  }
+
+  /* Smaller utility classes */
+  .row-flex { display: flex; gap: 24px; align-items: center; }
+  .col { flex: 1; }
+  .mt-2 { margin-top: 16px; } .mt-3 { margin-top: 24px; } .mt-4 { margin-top: 36px; }
+  .mb-2 { margin-bottom: 16px; }
+  ul.clean { list-style: none; padding-left: 0; }
+  ul.clean li { padding: 8px 0; border-bottom: 1px dashed rgba(0,0,0,0.08); display: flex; gap: 12px; }
+  ul.clean li:last-child { border-bottom: none; }
+  ul.clean li::before { content: "▸"; color: var(--db-orange); font-weight: 700; }
+
+  .icon-tile {
+    width: 56px; height: 56px; border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; color: #fff;
+    margin-bottom: 12px;
+  }
+  .icon-tile.genie { background: var(--db-amber); color: var(--db-navy); }
+  .icon-tile.rag { background: var(--db-mint); }
+  .icon-tile.sup { background: var(--db-navy); }
+  .icon-tile.app { background: var(--db-orange); }
+  .icon-tile.data { background: var(--db-gray-blue); }
+  .icon-tile.metric { background: var(--db-green); }
+
+  .demo-button {
+    display: inline-block; padding: 24px 60px;
+    background: #fff; color: var(--db-orange); font-weight: 800;
+    font-size: 30px; border-radius: 14px;
+    text-decoration: none; margin-top: 30px;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+    transition: transform 0.2s ease;
+    cursor: pointer;
+  }
+  .demo-button:hover { transform: translateY(-3px); }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="nav-dots" id="navDots"></div>
+
+<div class="stage" id="stage">
+
+  <!-- ============ Slide 1: TITLE ============ -->
+  <section class="slide active dark">
+    <div class="hero-deco"></div>
+    <span class="section-tag" style="background: var(--db-orange); color: #fff;">Databricks Demo</span>
+    <h1>Operations Intelligence<br/>Assistant</h1>
+    <p class="lead" style="max-width: 900px;">A multi-agent supervisor that reasons across structured operational data <em>and</em> unstructured engineering documents — answering questions that used to need three different people in three different tools.</p>
+    <div class="mt-4" style="display: flex; gap: 12px; flex-wrap: wrap;">
+      <span class="chip orange">Genie</span>
+      <span class="chip green">Agent Bricks</span>
+      <span class="chip amber">Metric Views</span>
+      <span class="chip teal">Databricks Apps</span>
+    </div>
+    <p class="small mt-4" style="margin-top: 60px;">Press <span class="kbd" style="background: rgba(255,255,255,0.1); padding: 2px 6px; border-radius: 4px;">→</span> to begin</p>
+  </section>
+
+  <!-- ============ Slide 2: THE CHALLENGE ============ -->
+  <section class="slide">
+    <div class="slide-title-row"><span class="section-tag">The Problem</span></div>
+    <h2>Operations questions don't live in one place</h2>
+    <p class="lead mt-3" style="max-width: 1100px;">A grid operator asks "why are emergency vendor costs rising in our western region?" — the answer lives across three systems:</p>
+    <div class="grid-3 mt-4">
+      <div class="card accent-teal">
+        <div class="icon-tile data">📊</div>
+        <h4>Structured operations data</h4>
+        <p class="small">SCADA telemetry, work orders, outage history, financial ledger — millions of rows in Unity Catalog tables.</p>
+      </div>
+      <div class="card accent-amber">
+        <div class="icon-tile genie">📄</div>
+        <h4>Unstructured documents</h4>
+        <p class="small">Root cause analyses, corrective actions, vendor contracts, OEM manuals, escalation memos — PDFs scattered across SharePoint.</p>
+      </div>
+      <div class="card accent-orange">
+        <div class="icon-tile sup">🧠</div>
+        <h4>Tribal knowledge</h4>
+        <p class="small">"Talk to Mike, he handles those substations" — answers locked in heads, Slack threads, and meeting notes.</p>
+      </div>
+    </div>
+    <p class="lead mt-4" style="color: var(--db-orange);"><strong>The fix:</strong> a supervisor agent that knows when to query data and when to read the document.</p>
+  </section>
+
+  <!-- ============ Slide 3: THE USE CASE ============ -->
+  <section class="slide">
+    <div class="slide-title-row"><span class="section-tag" style="background: var(--db-mint); color: #fff;">The Use Case</span></div>
+    <h2>Cascadia Renewable Operations</h2>
+    <p class="lead mt-3" style="max-width: 1100px;">A fictional 8-region renewable energy utility (wind / solar / battery) — facing rising emergency vendor costs and recurring asset failures concentrated in their Northwest footprint.</p>
+
+    <div class="grid-2 mt-4">
+      <div>
+        <h3>What we'll let an AI discover</h3>
+        <ul class="clean">
+          <li><span>The same transformer was emergency-repaired twice by the same vendor 6 months apart, with no durable fix</span></li>
+          <li><span>One vendor charges 4× the rate of another for equivalent scope, with no performance accountability</span></li>
+          <li><span>A Q1 budget freeze deferred 14 preventive work orders, directly upstream of a 40-outage cascade in May</span></li>
+          <li><span>The OEM manual mandates a vibration threshold that the internal engineering standard explicitly overrides</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3>Built end-to-end on Databricks</h3>
+        <div class="grid-2" style="gap: 12px;">
+          <div class="card accent-teal"><h4 style="font-size: 15px;">13 source tables</h4><p class="small">11.5M rows of correlated synthetic operational data</p></div>
+          <div class="card accent-green"><h4 style="font-size: 15px;">2 rollup tables</h4><p class="small">Daily summaries powering the semantic layer</p></div>
+          <div class="card accent-amber"><h4 style="font-size: 15px;">4 metric views</h4><p class="small">55 measures behind clean business names</p></div>
+          <div class="card accent-rose"><h4 style="font-size: 15px;">3 Genie spaces</h4><p class="small">Domain-scoped natural language to SQL</p></div>
+          <div class="card accent-mint"><h4 style="font-size: 15px;">50 PDFs</h4><p class="small">9 document types in a UC Volume</p></div>
+          <div class="card accent-orange"><h4 style="font-size: 15px;">1 supervisor</h4><p class="small">Mosaic AI Multi-Agent System</p></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 4: THE NARRATIVE HOOK ============ -->
+  <section class="slide dark">
+    <div class="slide-title-row"><span class="section-tag" style="background: var(--db-orange); color: #fff;">The Story</span></div>
+    <h2>One question. Three sources of truth.</h2>
+    <div class="mt-3" style="background: rgba(255,255,255,0.05); padding: 30px; border-radius: 14px; border-left: 5px solid var(--db-orange); max-width: 1200px;">
+      <p style="font-size: 32px; color: #fff; font-style: italic; line-height: 1.3;">"Why are emergency vendor costs rising in NW-PowerPool, and what should we do about it?"</p>
+    </div>
+    <div class="grid-3 mt-4">
+      <div>
+        <span class="chip amber">⚡ Genie · Financial</span>
+        <p class="mt-2" style="font-size: 16px; color: rgba(255,255,255,0.85);">Apex Emergency Grid Solutions invoiced <strong style="color: var(--db-amber);">$8.3M</strong> across 11 activations YTD — 4× Cascadia Power Services' rate for equivalent scope.</p>
+      </div>
+      <div>
+        <span class="chip green">📄 Documents</span>
+        <p class="mt-2" style="font-size: 16px; color: rgba(255,255,255,0.85);"><strong style="color: var(--db-mint);">TRA-10561</strong> was emergency-repaired twice (May, Dec) by Apex with no durable fix. Each time the vendor pushed full replacement.</p>
+      </div>
+      <div>
+        <span class="chip orange">🧠 Synthesis</span>
+        <p class="mt-2" style="font-size: 16px; color: rgba(255,255,255,0.85);">Board memo OER-2025-002 already recommends an <strong style="color: var(--db-orange);">$18M FY26 capital plan</strong> for aging-asset replacement at WIND-024.</p>
+      </div>
+    </div>
+    <p class="lead mt-4" style="color: rgba(255,255,255,0.7); font-size: 22px;">The supervisor synthesizes all three in a single answer with inline citations.</p>
+  </section>
+
+  <!-- ============ Slide 5: ARCHITECTURE ============ -->
+  <section class="slide">
+    <div class="slide-title-row"><span class="section-tag" style="background: var(--db-deep-teal); color: #fff;">Architecture</span></div>
+    <h2>The whole stack on Databricks</h2>
+    <div class="arch mt-4">
+      <div class="row">
+        <div class="box app" style="min-width: 260px;">📱 Databricks App (FastAPI + UI)</div>
+      </div>
+      <div class="row"><div class="arrow">↓ HTTPS / SSE</div></div>
+      <div class="row">
+        <div class="box sup" style="min-width: 260px;">🧠 Multi-Agent Supervisor<br/><span style="font-weight: 400; font-size: 12px; opacity: 0.7;">Claude Haiku 4.5 — Agent Bricks</span></div>
+      </div>
+      <div class="row"><div class="arrow">↓ parallel tool calls</div></div>
+      <div class="row">
+        <div class="box genie">⚡ Grid Operations Genie</div>
+        <div class="box genie">💰 Financial Genie</div>
+        <div class="box genie">🔧 Maintenance Genie</div>
+        <div class="box rag">📄 Knowledge Assistant<br/><span style="font-size:11px;opacity:0.85;">(RAG over 50 PDFs)</span></div>
+      </div>
+      <div class="row"><div class="arrow">↓</div></div>
+      <div class="row">
+        <div class="box data" style="min-width: 220px;">4 Metric Views</div>
+        <div class="box data" style="min-width: 220px;">2 Rollup Tables</div>
+        <div class="box data" style="min-width: 220px;">13 Source Tables (11.5M rows)</div>
+        <div class="box data" style="min-width: 200px;">UC Volume (50 PDFs)</div>
+      </div>
+    </div>
+    <p class="small mt-4">Every box runs on the same Lakehouse — same governance, same auth, same data lineage.</p>
+  </section>
+
+  <!-- ============ Slide 6: DATASET DEEP DIVE ============ -->
+  <section class="slide">
+    <div class="slide-title-row"><span class="section-tag">The Dataset</span></div>
+    <h2>Structured + unstructured, deeply correlated</h2>
+    <div class="grid-4 mt-3">
+      <div class="stat orange"><div class="num">13</div><div class="label">source tables in Unity Catalog</div></div>
+      <div class="stat green"><div class="num">11.5M</div><div class="label">rows of correlated operational data</div></div>
+      <div class="stat amber"><div class="num">50</div><div class="label">PDF documents in a UC Volume</div></div>
+      <div class="stat teal"><div class="num">9</div><div class="label">document types (OIR, RCA, CAR, EMR, …)</div></div>
+    </div>
+    <div class="grid-2 mt-4">
+      <div>
+        <h3 style="font-size: 22px;">Tables</h3>
+        <p class="small mt-2">regions · sites · assets · technicians · market_prices · <strong>telemetry (10.5M rows)</strong> · sensor_anomalies · outages · maintenance_schedule · work_orders · asset_financials · power_sales · safety_incidents</p>
+      </div>
+      <div>
+        <h3 style="font-size: 22px;">Documents</h3>
+        <p class="small mt-2"><strong>Outage Investigations</strong> · Root Cause Analyses · Corrective Action Reports · Emergency Maintenance Reports · Repair Approval Memos · Vendor Repair Agreements · Vendor Technical Manuals · Operational Escalations · Field Maintenance Summaries</p>
+      </div>
+    </div>
+    <p class="lead mt-4" style="color: var(--db-orange);"><strong>The trick:</strong> every PDF cites real asset IDs, dates, and dollar values that match the tables. Same story, two surfaces.</p>
+  </section>
+
+  <!-- ============ Slide 7: PRODUCT — GENIE ============ -->
+  <section class="slide">
+    <div class="slide-title-row"><span class="section-tag" style="background: var(--db-amber); color: var(--db-navy);">Product Walkthrough</span></div>
+    <h2><span style="color: var(--db-amber);">Databricks Genie</span> — natural language to SQL</h2>
+    <p class="lead mt-3" style="max-width: 1100px;">Genie Spaces give business users a chat interface over curated data. Each space is scoped to one domain with a metric view as the semantic backbone.</p>
+    <div class="grid-3 mt-4">
+      <div class="card accent-amber">
+        <div class="icon-tile genie">⚡</div>
+        <h4>Grid Operations Intelligence</h4>
+        <p class="small">15 measures · 7 sources · MTBF/MTTR, capacity factor, anomaly counts, grid instability risk</p>
+      </div>
+      <div class="card accent-amber">
+        <div class="icon-tile genie">💰</div>
+        <h4>Financial Performance</h4>
+        <p class="small">9 measures · revenue, OpEx, profit margin, market exposure, outage cost impact</p>
+      </div>
+      <div class="card accent-amber">
+        <div class="icon-tile genie">🔧</div>
+        <h4>Maintenance &amp; Workforce</h4>
+        <p class="small">15 measures · preventive-vs-reactive ratio, technician utilization, parts cost</p>
+      </div>
+    </div>
+    <div class="mt-4">
+      <p class="small mb-2"><strong>Powered by Unity Catalog Metric Views</strong> — declarative YAML for dimensions + measures, joins precomputed, MEASURE() function applies aggregation rules consistently.</p>
+      <pre><span style="color:var(--db-orange);">SELECT</span> region_name, <span style="color:var(--db-orange);">MEASURE</span>(forced_outage_count), <span style="color:var(--db-orange);">MEASURE</span>(revenue_loss_from_outages_usd)
+<span style="color:var(--db-orange);">FROM</span> financial_performance_metrics <span style="color:var(--db-orange);">GROUP BY</span> region_name <span style="color:var(--db-orange);">ORDER BY</span> 3 <span style="color:var(--db-orange);">DESC</span>;</pre>
+    </div>
+  </section>
+
+  <!-- ============ Slide 8: PRODUCT — AGENT BRICKS ============ -->
+  <section class="slide">
+    <div class="slide-title-row"><span class="section-tag" style="background: var(--db-green); color: #fff;">Product Walkthrough</span></div>
+    <h2><span style="color: var(--db-green);">Agent Bricks</span> — multi-agent orchestration</h2>
+    <p class="lead mt-3" style="max-width: 1100px;">Agent Bricks is the no-code platform for building production agents. We stitched together two Agent Bricks products:</p>
+    <div class="grid-2 mt-4">
+      <div class="card accent-mint">
+        <div class="icon-tile rag">📄</div>
+        <h4 style="font-size: 22px;">Knowledge Assistant</h4>
+        <p class="small mt-2">Instructed RAG over the 50-PDF UC Volume. Returns answers with inline citations and document references.</p>
+        <ul class="clean mt-2" style="font-size: 14px;">
+          <li><span>Auto-syncs new files</span></li>
+          <li><span>Up to 10 knowledge sources</span></li>
+          <li><span>Built-in feedback loop</span></li>
+        </ul>
+      </div>
+      <div class="card accent-orange">
+        <div class="icon-tile sup">🧠</div>
+        <h4 style="font-size: 22px;">Multi-Agent Supervisor</h4>
+        <p class="small mt-2">A Claude-Haiku-powered router that decides which sub-agent(s) to call, including in parallel, then synthesizes the final answer.</p>
+        <ul class="clean mt-2" style="font-size: 14px;">
+          <li><span>Up to 30 sub-agents / tools</span></li>
+          <li><span>Parallel tool execution</span></li>
+          <li><span>Streaming response API</span></li>
+        </ul>
+      </div>
+    </div>
+    <p class="small mt-4" style="text-align: center;">Both deploy as standard <code style="background: rgba(0,0,0,0.05); padding: 2px 8px; border-radius: 4px;">model serving endpoints</code> — same auth, scaling, monitoring as any other Databricks model.</p>
+  </section>
+
+  <!-- ============ Slide 9: PRODUCT — DATABRICKS APPS ============ -->
+  <section class="slide">
+    <div class="slide-title-row"><span class="section-tag" style="background: var(--db-orange); color: #fff;">Product Walkthrough</span></div>
+    <h2><span style="color: var(--db-orange);">Databricks Apps</span> — the frontend</h2>
+    <p class="lead mt-3" style="max-width: 1100px;">FastAPI + static HTML, ~600 lines of Python, deployed in 30 seconds with the Databricks CLI. Auto OAuth via the workspace.</p>
+    <div class="grid-3 mt-4">
+      <div class="card accent-orange">
+        <h4>⚡ Live streaming</h4>
+        <p class="small">Server-Sent Events from the supervisor. Tool calls appear in the trace panel as they fire; the answer types in word-by-word.</p>
+      </div>
+      <div class="card accent-orange">
+        <h4>🗂️ In-app Q&amp;A cache</h4>
+        <p class="small">LRU keyed on (history + question) hash, 1-hour TTL. Repeat questions return in &lt;1s with a "⚡ Cached" badge.</p>
+      </div>
+      <div class="card accent-orange">
+        <h4>🔍 Routing inspector</h4>
+        <p class="small">Right-side panel shows every step the supervisor took: which Genie space, which document, what the LLM was reasoning about.</p>
+      </div>
+    </div>
+    <div class="grid-2 mt-4">
+      <div>
+        <h4 style="font-size: 18px;">Deployment</h4>
+        <pre style="font-size: 13px;">$ databricks apps create utility-ops-supervisor
+$ databricks sync . /Workspace/Users/.../app
+$ databricks apps deploy utility-ops-supervisor</pre>
+      </div>
+      <div>
+        <h4 style="font-size: 18px;">Bypasses gateway timeout</h4>
+        <p class="small mt-2">Async job pattern: POST returns a job_id in <strong>&lt;1s</strong>, frontend polls every 1.2s, supports questions up to 10 minutes without hitting the 60-second platform timeout.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 10: DEMO PIVOT ============ -->
+  <section class="slide demo-pivot">
+    <span class="section-tag" style="background: rgba(255,255,255,0.2); color: #fff;">Live Demo</span>
+    <h1>Let's see it in action</h1>
+    <p style="max-width: 900px; margin: 20px auto 0;">Switch to the app. Try a single-source question, then a cross-source one. Watch the routing pills appear in real time.</p>
+    <div class="grid-3 mt-4" style="max-width: 1100px; width: 100%;">
+      <div style="background: rgba(255,255,255,0.15); padding: 18px; border-radius: 12px;">
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Try 1 — pure Genie</p>
+        <p style="font-size: 17px; color: #fff; font-weight: 600;">"List the top 5 outages by lost MWh"</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.15); padding: 18px; border-radius: 12px;">
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Try 2 — pure documents</p>
+        <p style="font-size: 17px; color: #fff; font-weight: 600;">"What does RCA-2025-001 say?"</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.15); padding: 18px; border-radius: 12px;">
+        <p style="font-size: 14px; opacity: 0.9; margin-bottom: 6px;">Try 3 — cross-source</p>
+        <p style="font-size: 17px; color: #fff; font-weight: 600;">"Why are emergency vendor costs rising in NW-PowerPool?"</p>
+      </div>
+    </div>
+    <a class="demo-button" onclick="window.open('about:blank','_self')">🎬 Pivot to App →</a>
+    <p style="opacity: 0.8; margin-top: 16px; font-size: 14px;">(Use Cmd+Tab to switch — slides stay open for the rest of the talk)</p>
+  </section>
+
+  <!-- ============ Slide 11: GENIE BEST PRACTICES — INTRO ============ -->
+  <section class="slide dark">
+    <span class="section-tag" style="background: var(--db-amber); color: var(--db-navy);">Best Practices · 1 of 3</span>
+    <h1>Genie Best Practices</h1>
+    <p class="lead mt-3" style="max-width: 1100px;">From <a href="https://docs.databricks.com/aws/en/genie/best-practices" style="color: var(--db-amber);">docs.databricks.com/genie/best-practices</a> — 16 practices, distilled into the highest-impact themes for new Genie space authors.</p>
+    <div class="grid-3 mt-4">
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>📋 Define the space</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">Audience, purpose, topic boundary</p>
+      </div>
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>🎯 Curate the data</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">Quality descriptions, ≤5 tables to start, ≤30 limit</p>
+      </div>
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>🧪 Test &amp; iterate</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">Benchmarks, user testing, refine instructions</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 12: GENIE BEST PRACTICES — DATA ============ -->
+  <section class="slide">
+    <span class="section-tag" style="background: var(--db-amber); color: var(--db-navy);">Genie Best Practices · Data</span>
+    <h2>Curate the data first, instructions second</h2>
+    <div class="grid-2 mt-4">
+      <div>
+        <div class="bp"><div class="n">1</div><h4>Concise, well-documented datasets</h4><p>Quality table + column descriptions in Unity Catalog are critical for Genie accuracy. The first lever — not the last.</p></div>
+        <div class="bp"><div class="n">2</div><h4>Start small</h4><p>Begin with ≤5 tables. Iterate based on real user feedback rather than what you think they'll ask.</p></div>
+        <div class="bp"><div class="n">3</div><h4>Work within the 30-table limit</h4><p>If you need more, pre-join into views. A smaller, focused space outperforms a bloated one.</p></div>
+        <div class="bp"><div class="n">4</div><h4>Add metadata + synonyms</h4><p>Synonyms scoped to your space help Genie match user vocabulary to your column names.</p></div>
+      </div>
+      <div>
+        <div class="bp orange"><div class="n">5</div><h4>Domain expert defines the space</h4><p>Data analysts proficient in SQL should curate — they understand both data and the insights worth surfacing.</p></div>
+        <div class="bp orange"><div class="n">6</div><h4>Define the space's purpose</h4><p>Audience + topic boundary. "Marketing analytics" beats "all sales data" for accuracy.</p></div>
+        <div class="bp orange"><div class="n">7</div><h4>Use prompt matching</h4><p>Auto-corrects spelling and matches values to user phrasing without you writing rules.</p></div>
+        <div class="bp orange"><div class="n">8</div><h4>One topic per space</h4><p>If you're tempted to add unrelated tables, build a second space and let users pick.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 13: GENIE BEST PRACTICES — INSTRUCTIONS ============ -->
+  <section class="slide">
+    <span class="section-tag" style="background: var(--db-amber); color: var(--db-navy);">Genie Best Practices · Instructions</span>
+    <h2>Prefer SQL examples over text instructions</h2>
+    <div class="grid-2 mt-4">
+      <div>
+        <div class="bp green"><div class="n">9</div><h4>SQL expressions &gt; example SQL &gt; text instructions</h4><p>Hierarchy: SQL expressions for metrics, example SQL for complex questions, text instructions only as a last resort.</p></div>
+        <div class="bp green"><div class="n">10</div><h4>Focused examples beat lengthy guidance</h4><p>5 great example SQLs outperform 5 paragraphs of text. Each example teaches a pattern.</p></div>
+        <div class="bp green"><div class="n">11</div><h4>Write clear, specific text instructions</h4><p>Replace vague guidance with concrete scenarios and expected behavior. No "be helpful" — specify when and how.</p></div>
+        <div class="bp green"><div class="n">12</div><h4>Avoid conflicting instructions</h4><p>SQL examples and text guidance must align on details like rounding, time zones, default filters.</p></div>
+      </div>
+      <div>
+        <div class="bp rose"><div class="n">13</div><h4>Prompt Genie to ask clarifying questions</h4><p>Tell it explicitly when it should pause and ask, and what specific questions to ask.</p></div>
+        <div class="bp rose"><div class="n">14</div><h4>Customize summaries</h4><p>Genie's natural-language summary alongside results can be tuned with dedicated instructions.</p></div>
+        <div class="bp rose"><div class="n">15</div><h4>Test &amp; adjust</h4><p>Inspect generated SQL. Add benchmark questions. Score systematically. Don't ship blind.</p></div>
+        <div class="bp rose"><div class="n">16</div><h4>Real user testing</h4><p>Recruit business users with clear expectations. Their unscripted questions reveal the gaps.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 14: KNOWLEDGE ASSISTANT — INTRO ============ -->
+  <section class="slide dark">
+    <span class="section-tag" style="background: var(--db-mint); color: var(--db-navy);">Best Practices · 2 of 3</span>
+    <h1>Knowledge Assistant Best Practices</h1>
+    <p class="lead mt-3" style="max-width: 1100px;">"Instructed retriever" approach that goes beyond traditional RAG. The key: feedback loops and curated knowledge sources.</p>
+    <div class="grid-3 mt-4">
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>📚 ≤10 sources per assistant</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">Use incremental sync, not full re-ingest</p>
+      </div>
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>👥 Collaborative feedback</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">SMEs label examples, you tune via natural-language guidelines</p>
+      </div>
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>🔐 Permission scoping</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">CAN_MANAGE for editors, CAN_QUERY for end users</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 15: KNOWLEDGE ASSISTANT — CONFIG ============ -->
+  <section class="slide">
+    <span class="section-tag" style="background: var(--db-mint); color: var(--db-navy);">Knowledge Assistant · Configuration</span>
+    <h2>Get the file plumbing right</h2>
+    <div class="grid-2 mt-4">
+      <div>
+        <h3 style="font-size: 22px;">Supported sources</h3>
+        <ul class="clean mt-2">
+          <li><span><strong>UC Volume:</strong> .txt, .pdf, .md, .ppt/.pptx, .doc/.docx</span></li>
+          <li><span><strong>UC Table:</strong> requires <code style="font-size:13px;">content</code> (BINARY/STRING) + metadata struct</span></li>
+          <li><span><strong>50 MB cap</strong> per file (auto-excluded if larger)</span></li>
+          <li><span><strong>Vector Search:</strong> only <code style="font-size:13px;">databricks-gte-large-en</code> embedding model is supported</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size: 22px;">Iterative improvement</h3>
+        <div class="bp green"><div class="n">A</div><h4>Gather labeled examples</h4><p>SMEs mark good vs bad answers. Use the agent configuration page.</p></div>
+        <div class="bp green"><div class="n">B</div><h4>Natural-language guidelines</h4><p>Tune behavior without writing code — describe what you want in plain English.</p></div>
+        <div class="bp green"><div class="n">C</div><h4>Incremental sync</h4><p>When source files change, sync only the deltas — not the whole corpus.</p></div>
+        <div class="bp green"><div class="n">D</div><h4>Disable AI Guardrails</h4><p>On the embedding endpoint specifically — required for proper KA function.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 16: MULTI-AGENT SUPERVISOR — INTRO ============ -->
+  <section class="slide dark">
+    <span class="section-tag" style="background: var(--db-orange); color: #fff;">Best Practices · 3 of 3</span>
+    <h1>Multi-Agent Supervisor Best Practices</h1>
+    <p class="lead mt-3" style="max-width: 1100px;">The supervisor coordinates Genie spaces, agent endpoints, and Unity Catalog functions. The quality of its routing depends almost entirely on how well you describe each tool.</p>
+    <div class="grid-3 mt-4">
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>📝 Detailed tool descriptions</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">"As much detail as possible" — the supervisor routes on these</p>
+      </div>
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>🔄 Iterative refinement</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">Test → expert feedback → natural-language guidelines</p>
+      </div>
+      <div class="card" style="background: rgba(255,255,255,0.08);">
+        <h4>🛡️ Permission alignment</h4>
+        <p class="small" style="color: rgba(255,255,255,0.8);">End users need explicit access to each sub-agent</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 17: MULTI-AGENT SUPERVISOR — CONFIG ============ -->
+  <section class="slide">
+    <span class="section-tag" style="background: var(--db-orange); color: #fff;">Multi-Agent Supervisor · Configuration</span>
+    <h2>Start with the essentials, then iterate</h2>
+    <div class="grid-2 mt-4">
+      <div>
+        <h3 style="font-size: 22px;">Initialize correctly</h3>
+        <div class="bp orange"><div class="n">1</div><h4>Up to 30 integrated agents/tools</h4><p>Plenty for most enterprise use cases. Quality of descriptions matters more than count.</p></div>
+        <div class="bp orange"><div class="n">2</div><h4>Detailed sub-agent descriptions</h4><p>Each description is what the supervisor sees when deciding to route. Vague descriptions = wrong tool calls.</p></div>
+        <div class="bp orange"><div class="n">3</div><h4>Clear top-level instructions</h4><p>"When user asks about X, prefer tool Y. When they need numbers AND documents, call both in parallel."</p></div>
+      </div>
+      <div>
+        <h3 style="font-size: 22px;">Test like a power user</h3>
+        <div class="bp teal"><div class="n">4</div><h4>Use the AI Playground</h4><p>Enter complex multi-part questions. Watch task delegation. Enable AI Judge + synthetic task generation.</p></div>
+        <div class="bp teal"><div class="n">5</div><h4>Add response guidelines when prompted</h4><p>The platform asks for them — they're how you teach the supervisor non-obvious patterns.</p></div>
+        <div class="bp teal"><div class="n">6</div><h4>Workspace requirements</h4><p>Serverless compute, Unity Catalog, Model Serving, supported region. <code style="font-size:13px;">databricks-gte-large-en</code> endpoint with AI Guardrails + rate limits disabled.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 18: PERFORMANCE TIPS ============ -->
+  <section class="slide">
+    <span class="section-tag" style="background: var(--db-burgundy); color: #fff;">Performance Tuning</span>
+    <h2>What actually moves the needle</h2>
+    <p class="lead mt-3" style="max-width: 1100px;">Based on real benchmarking of this exact stack: simple questions go from 25s → ~10s, cross-source from 100s → ~30-40s.</p>
+    <table style="width: 100%; margin-top: 24px; border-collapse: collapse; font-size: 18px;">
+      <thead>
+        <tr style="background: var(--db-navy); color: #fff;">
+          <th style="text-align: left; padding: 12px 16px;">Change</th>
+          <th style="text-align: left; padding: 12px 16px;">Where</th>
+          <th style="text-align: center; padding: 12px 16px;">Impact</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <td style="padding: 12px 16px;"><strong>Switch supervisor LLM to Haiku 4.5</strong></td>
+          <td style="padding: 12px 16px;">Agent Bricks → Multi-Agent System → Model</td>
+          <td style="padding: 12px 16px; text-align: center;"><span class="chip orange">40-60% faster</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <td style="padding: 12px 16px;"><strong>Enable parallel tool calls</strong></td>
+          <td style="padding: 12px 16px;">Agent Bricks → Advanced</td>
+          <td style="padding: 12px 16px; text-align: center;"><span class="chip orange">20-40% on multi-tool</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <td style="padding: 12px 16px;"><strong>Trim system prompt to &lt;500 tokens</strong></td>
+          <td style="padding: 12px 16px;">Agent Bricks → Instructions</td>
+          <td style="padding: 12px 16px; text-align: center;"><span class="chip amber">5-15% per turn</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <td style="padding: 12px 16px;"><strong>KA top_k = 5-8 (not default 20)</strong></td>
+          <td style="padding: 12px 16px;">Knowledge Assistant settings</td>
+          <td style="padding: 12px 16px; text-align: center;"><span class="chip amber">10-25% on doc Q&A</span></td>
+        </tr>
+        <tr style="border-bottom: 1px solid rgba(0,0,0,0.08);">
+          <td style="padding: 12px 16px;"><strong>In-app Q&amp;A cache (built-in)</strong></td>
+          <td style="padding: 12px 16px;">Already in the app</td>
+          <td style="padding: 12px 16px; text-align: center;"><span class="chip green">60× faster on repeats</span></td>
+        </tr>
+        <tr>
+          <td style="padding: 12px 16px;"><strong>Streaming response (built-in)</strong></td>
+          <td style="padding: 12px 16px;">Already in the app</td>
+          <td style="padding: 12px 16px; text-align: center;"><span class="chip green">Perceived 3× faster</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ============ Slide 19: SUMMARY ============ -->
+  <section class="slide">
+    <span class="section-tag">Wrap-Up</span>
+    <h2>What we built today</h2>
+    <div class="grid-4 mt-4">
+      <div class="stat orange"><div class="num">3</div><div class="label">Genie Spaces</div></div>
+      <div class="stat amber"><div class="num">4</div><div class="label">Metric Views</div></div>
+      <div class="stat green"><div class="num">2</div><div class="label">Agent Bricks endpoints</div></div>
+      <div class="stat teal"><div class="num">1</div><div class="label">Databricks App</div></div>
+    </div>
+    <div class="grid-2 mt-4">
+      <div>
+        <h3 style="font-size: 24px;">What you get</h3>
+        <ul class="clean">
+          <li><span>A working multi-source AI assistant for utility operations</span></li>
+          <li><span>End-to-end on the Databricks Lakehouse — one auth, one governance model</span></li>
+          <li><span>A repo that one-shot deploys: <code style="font-size:13px;">setup_all.ipynb</code> → Run All</span></li>
+          <li><span>Templates for the supervisor agent, the app, and the document generation</span></li>
+        </ul>
+      </div>
+      <div>
+        <h3 style="font-size: 24px;">The repo</h3>
+        <div style="background: var(--db-navy); color: #fff; padding: 20px; border-radius: 12px; font-family: 'DM Mono', monospace; font-size: 14px;">
+          <p style="color: var(--db-amber); margin-bottom: 6px;">$ git clone</p>
+          <p style="color: #fff; word-break: break-all;">github.com/kailynklaassen/<br/>fakedata_demo_iot_app</p>
+          <p style="color: rgba(255,255,255,0.6); margin-top: 12px; font-size: 12px;">Includes:</p>
+          <p style="color: rgba(255,255,255,0.85); font-size: 12px;">7 notebooks · 50 PDFs · full app · 5 subagent prompts · narrative bible</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ Slide 20: THANKS ============ -->
+  <section class="slide dark">
+    <div class="hero-deco"></div>
+    <h1 style="font-size: 120px;">Questions?</h1>
+    <p class="lead mt-3" style="max-width: 900px;">Happy to dive deeper into the supervisor agent, the metric view design, the document generation pipeline, or any architecture choice.</p>
+    <div class="mt-4" style="display: flex; gap: 20px; flex-wrap: wrap;">
+      <div style="background: rgba(255,255,255,0.08); padding: 20px 24px; border-radius: 12px; border-left: 4px solid var(--db-orange);">
+        <p class="small" style="color: rgba(255,255,255,0.6); margin-bottom: 4px;">Repo</p>
+        <p style="color: #fff; font-family: 'DM Mono', monospace; font-size: 15px;">github.com/kailynklaassen/fakedata_demo_iot_app</p>
+      </div>
+      <div style="background: rgba(255,255,255,0.08); padding: 20px 24px; border-radius: 12px; border-left: 4px solid var(--db-amber);">
+        <p class="small" style="color: rgba(255,255,255,0.6); margin-bottom: 4px;">Docs</p>
+        <p style="color: #fff; font-family: 'DM Mono', monospace; font-size: 15px;">docs.databricks.com/genie + agent-bricks</p>
+      </div>
+    </div>
+    <p class="small mt-4" style="color: rgba(255,255,255,0.55); margin-top: 80px;">Thank you.</p>
+  </section>
+
+</div>
+
+<div class="footer-bar">
+  <span><span class="kbd">←</span> <span class="kbd">→</span> navigate &nbsp;·&nbsp; <span class="kbd">F</span> fullscreen &nbsp;·&nbsp; <span class="kbd">Home</span> first &nbsp;·&nbsp; <span class="kbd">End</span> last</span>
+  <span id="slide-counter">1 / 20</span>
+</div>
+
+<script>
+const slides = document.querySelectorAll('.slide');
+const total = slides.length;
+const progress = document.getElementById('progress');
+const counter = document.getElementById('slide-counter');
+const navDots = document.getElementById('navDots');
+let current = 0;
+
+// Build nav dots
+slides.forEach((_, i) => {
+  const dot = document.createElement('div');
+  dot.className = 'dot';
+  dot.title = `Slide ${i + 1}`;
+  dot.addEventListener('click', () => go(i));
+  navDots.appendChild(dot);
+});
+
+function go(idx) {
+  if (idx < 0 || idx >= total) return;
+  slides[current].classList.remove('active');
+  if (idx < current) slides[current].classList.add('prev');
+  else slides[current].classList.remove('prev');
+  current = idx;
+  slides[current].classList.add('active');
+  slides[current].classList.remove('prev');
+  progress.style.width = `${((current + 1) / total) * 100}%`;
+  counter.textContent = `${current + 1} / ${total}`;
+  document.querySelectorAll('.nav-dots .dot').forEach((d, i) => d.classList.toggle('active', i === current));
+  history.replaceState(null, '', `#${current + 1}`);
+}
+
+function next() { go(current + 1); }
+function prev() { go(current - 1); }
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') { e.preventDefault(); next(); }
+  else if (e.key === 'ArrowLeft' || e.key === 'PageUp') { e.preventDefault(); prev(); }
+  else if (e.key === 'Home') { e.preventDefault(); go(0); }
+  else if (e.key === 'End') { e.preventDefault(); go(total - 1); }
+  else if (e.key === 'f' || e.key === 'F') {
+    if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+    else document.exitFullscreen();
+  } else if (/^\d$/.test(e.key)) {
+    const n = parseInt(e.key, 10);
+    if (n >= 1 && n <= 9) go(n - 1);
+  }
+});
+
+// Click anywhere on the slide (except links) to advance
+document.addEventListener('click', (e) => {
+  if (e.target.closest('a, button, .nav-dots, .demo-button')) return;
+  next();
+});
+
+// Hash-based deep link on load
+const initial = parseInt(location.hash.slice(1), 10);
+if (!isNaN(initial) && initial >= 1 && initial <= total) go(initial - 1);
+else go(0);
+</script>
+
+</body>
+</html>
